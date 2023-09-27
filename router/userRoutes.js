@@ -44,7 +44,7 @@ router.get('/details/:email', (req, res) => {
  
     try {
         // throw new Error('failed!')
-        if (!userEmail) res.status(404).send('id is not found!')
+        if (!userEmail) res.status(404).send('Email is not registed in db! Please add user with that email')
  
         const query = 'SELECT * FROM public.user_details WHERE email = $1';
         pool.query(query, [userEmail], (err, result) => {
