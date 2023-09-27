@@ -7,7 +7,7 @@ const pool = require('../components/db/db')
 // ======================================================================
 // TASK 1 && TASK 2 - Simple GET and POST API to return data
 // ======================================================================
-//GET METHOD
+//GET METHOD - API URL: localhost:3003/api/user/id
 router.get('/user/id', (req, res) => {
     // logger.log('info', `You have access /user/ud/1 route`)
     res.json({
@@ -19,7 +19,8 @@ router.get('/user/id', (req, res) => {
     })
 })
 
-//POST METHOD
+//POST METHOD - API URL localhost:3003/api/user/register
+// Note: Make sure to declare your payload in JSON via POSTMAN
 router.post('/user/register', (req, res) => { 
     let username = req.body.username;
     let password = req.body.password;
@@ -37,6 +38,7 @@ router.post('/user/register', (req, res) => {
 // TASK 3 
 // ======================================================================
 //  GET METHOD - Read user data based on URL params input: email
+//  API URL - localhost:3003/api/user/details/<replace with registered email in db>
 router.get('/details/:email', (req, res) => {
     let userEmail = req.params.email
  
@@ -62,7 +64,10 @@ router.get('/details/:email', (req, res) => {
  })
  
 
-// POST METHOD - Register user details
+//  POST METHOD - Register user details
+//  API URL -  localhost:3003/api/user/add 
+//  Note: Make sure to declare your payload in JSON via POSTMAN
+
 //  router.post('/user/add', validatePayload, (req, res) => {
  router.post('/user/add', (req, res) => {
     let { email, first_name, last_name, address, age } = req.body
