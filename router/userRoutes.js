@@ -1,8 +1,13 @@
 const express = require('express')
 const router  = express.Router()
+const multer  = require('multer')
+const path  = require('path');
+const fs = require('fs')
 
 const validatePayload = require('../components/middleware/validatePayload')
 const pool = require('../components/db/db')
+
+
 
 // ======================================================================
 // TASK 1 && TASK 2 - Simple GET and POST API to return data
@@ -61,7 +66,7 @@ router.get('/details/:email', (req, res) => {
         logger.log('error', err.message)
         res.send('Error fetching user data')
     }
- })
+})
  
 
 //  POST METHOD - Register user details
@@ -69,7 +74,7 @@ router.get('/details/:email', (req, res) => {
 //  Note: Make sure to declare your payload in JSON via POSTMAN
 
 //  router.post('/user/add', validatePayload, (req, res) => {
- router.post('/user/add', (req, res) => {
+router.post('/user/add', (req, res) => {
     let { email, first_name, last_name, address, age } = req.body
  
     if (!email || !first_name || !last_name || !address || !age) res.status(404).send('Missing payload. Please check!')
@@ -97,7 +102,62 @@ router.get('/details/:email', (req, res) => {
     }
     pool.end();
     });
- })
+})
 
+ // ======================================================================
+// TASK 4 
+// ======================================================================
+//  POST METHOD - Send file .txt to local storage
+//  API URL - localhost:3003/api/upload
+//  Note: Test this using POSTMAN, in the body tab, click 'form-data', put 'file' in key and upload the .txt file in its value.
+
+// Create the destination directory if it doesn't exist
+const uploadDir = path.resolve(__dirname, '../public/upload/');
+if (!fs.existsSync(uploadDir)) {
+fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: path.resolve(__dirname, '../public/upload/'),
+    filename: function (req, file, callback) {
+        callback(null, file.originalname); 
+    },
+});
+  
+const txtFileFilter = function (req, file, callback) {
+    if (file.mimetype === 'text/plain') {
+        callback(null, true);
+    } else {
+        callback(new Error('Only APK files are allowed'));
+    }
+};
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 1024 * 1024 }, // limit to 1MB
+    fileFilter: txtFileFilter
+});
+
+router.post('/upload', upload.single('file'),  (req, res) => {
+    try {
+        if (req.fileValidationError) return res.status(400).send({status: 'failed', errMsg: '.txt files only!'});
+          
+        const pathname = `/upload/${req.file.filename}`;
+
+        pool.query(
+            'INSERT INTO file_uploads (file_path, "created_at") VALUES ($1, $2) RETURNING id', 
+        [pathname, new Date()], (error, result) => {
+        if (error) {
+            console.error('Error inserting data into DB', error);
+            res.send({ message: error.detail})
+        } else {
+            return res.status(200).send({status: 'success', msg:'File uploaded successfully to local storage.'})
+        }
+        pool.end();
+        });
+    } catch (err) {
+        return res.status(500).send({status: 'failed', errMsg: 'Something wrong with /upload API.'});
+    }
+})
 
 module.exports = router
