@@ -165,10 +165,10 @@ router.post('/upload', upload.single('file'),  (req, res) => {
  // ======================================================================
 // TASK 5 (a)
 // ======================================================================
-//  POST METHOD - Send file .txt to local storage
+//  GET METHOD - Fetch latest bitcoin prices from external 3rd party API and saved to database
 //  API URL - localhost:3003/api/bitcoin_price
 
-router.post('/bitcoin_price', async (req, res) => {
+router.get('/bitcoin_price', async (req, res) => {
    try {
         await axios.get("https://api.coindesk.com/v1/bpi/currentprice.json")
         .then(response => {
