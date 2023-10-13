@@ -3,6 +3,7 @@ const router  = express.Router()
 const multer  = require('multer')
 const path  = require('path');
 const fs = require('fs')
+const axios = require('axios')
 
 const validatePayload = require('../components/middleware/validatePayload')
 const pool = require('../components/db/db')
@@ -159,5 +160,63 @@ router.post('/upload', upload.single('file'),  (req, res) => {
         return res.status(500).send({status: 'failed', errMsg: 'Something wrong with /upload API.'});
     }
 })
+
+
+ // ======================================================================
+// TASK 5 (a)
+// ======================================================================
+//  POST METHOD - Send file .txt to local storage
+//  API URL - localhost:3003/api/bitcoin_price
+
+router.post('/bitcoin_price', upload.single('file'), async (req, res) => {
+   try {
+        await axios.get("https://api.coindesk.com/v1/bpi/currentprice.json")
+        .then(response => {
+            let bitcoinJsonData = response.data // this is full response JSON data from external API
+
+            let currentBitcoinInUSD = bitcoinJsonData.bpi.USD.rate_float
+            let currentBitcoinInEUR = bitcoinJsonData.bpi.GBP.rate_float
+            let currentBitcoinInGBP = bitcoinJsonData.bpi.EUR.rate_float
+
+            let convertJsonDataToString = JSON.stringify(bitcoinJsonData)
+
+            pool.query(
+                'INSERT INTO bitcoin_prices (current_price_usd, current_price_gbp, current_price_eur, "created_at", api_response_json) VALUES ($1, $2, $3, $4 ,$5) RETURNING id', 
+            [currentBitcoinInUSD, currentBitcoinInEUR, currentBitcoinInGBP, new Date(), convertJsonDataToString], (err, result) => {
+            if (err) {
+                console.error('Error inserting data into DB', error);
+                return res.send({ 
+                    status: 'failed',
+                    message: 'Failed to saved in database' + err.message
+                })
+            } else {
+                return res.status(200).send({ 
+                    status: 'success', 
+                    message:'Succesfully fetch external API and saved in database',
+                    data: {
+                        currentBitcoinInUSD,
+                        currentBitcoinInEUR,
+                        currentBitcoinInGBP,
+                        convertJsonDataToString
+                    }
+                })
+            }
+            pool.end();
+        });
+
+
+        })
+        .catch( err => {
+            return res.json({ 
+                status: 'failed to fetch external api',
+                detail_error: err.message
+            })
+        })
+   } catch (err) {
+    console.log(err.message)
+    return res.json({ status: 'failed', message: err.message})
+   }
+})
+
 
 module.exports = router
