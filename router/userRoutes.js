@@ -168,7 +168,7 @@ router.post('/upload', upload.single('file'),  (req, res) => {
 //  POST METHOD - Send file .txt to local storage
 //  API URL - localhost:3003/api/bitcoin_price
 
-router.post('/bitcoin_price', upload.single('file'), async (req, res) => {
+router.post('/bitcoin_price', async (req, res) => {
    try {
         await axios.get("https://api.coindesk.com/v1/bpi/currentprice.json")
         .then(response => {
@@ -184,7 +184,7 @@ router.post('/bitcoin_price', upload.single('file'), async (req, res) => {
                 'INSERT INTO bitcoin_prices (current_price_usd, current_price_gbp, current_price_eur, "created_at", api_response_json) VALUES ($1, $2, $3, $4 ,$5) RETURNING id', 
             [currentBitcoinInUSD, currentBitcoinInEUR, currentBitcoinInGBP, new Date(), convertJsonDataToString], (err, result) => {
             if (err) {
-                console.error('Error inserting data into DB', error);
+                console.error('Error inserting data into DB', err);
                 return res.send({ 
                     status: 'failed',
                     message: 'Failed to saved in database' + err.message
