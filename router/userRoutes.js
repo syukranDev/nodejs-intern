@@ -4,9 +4,12 @@ const multer  = require('multer')
 const path  = require('path');
 const fs = require('fs')
 const axios = require('axios')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 
 const validatePayload = require('../components/middleware/validatePayload')
-const pool = require('../components/db/db')
+const pool = require('../components/db/db');
+const { verifyToken } = require('../components/middleware/verifyToken');
 
 
 
@@ -218,5 +221,105 @@ router.get('/bitcoin_price', async (req, res) => {
    }
 })
 
+ // ======================================================================
+// TASK 6
+// ======================================================================
+//  Title: Create a login system that will store username and hashed password and generated token into database, and applied the generated token (valid in 5mins, you can change this) to access your API via middleware.
+//  API URL (POST) - localhost:3003/api/v2/user/register - this will store username and password to database
+//  API URL (POST) - localhost:3003/api/v2/user/login - this will generate token to be used to access protected route 
+//  API URL (GET) - localhost:3003/api/v2/protected - this is protected route, to test this copy the token and paste into the Authorization HTTP header in postman/curl.
+//  API URL (GET) - localhost:3003/api/v2/user/logout - this will removed saved token in database but doesnt mean the removed token is already expired. 
+//  
+//  NOTE: This is just to demonstrate 'BASIC' security of how API route is being protected with usage of JWT token and saved token manipulation in database.
+
+const secretKey = 'nodejsIntern' //Normally we saved this in config file but I'll just put it here.
+
+router.post('/v2/user/register', async (req, res) => {
+    const { username, password } = req.body;
+  
+    try {
+      const existingUser = await pool.query('SELECT * FROM public.users WHERE id = $1', [username]);
+
+      console.log({existingUser})
+  
+      if (existingUser.rows.length > 0) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+  
+      bcrypt.hash(password, 10, async (err, hashedPassword) => {
+        if (err) {
+          return res.status(500).json({ message: 'Error hashing password' });
+        }
+  
+        await pool.query(
+          `INSERT INTO "users" (
+              "id", "password", "role", "name",
+              "active",
+              "retries",
+              "phone",
+              "email",
+              "session_id",
+              "last_login_at",
+              "created_by",
+              "created_at",
+              "updated_at",
+              "lang_pref",
+              "token"
+            ) VALUES (
+              $1, $2, 'customer', $1, true, 0, NULL, NULL, NULL, NULL, 'superadmin', NOW(), NOW(), NULL, NULL
+            )`,
+          [username, hashedPassword]
+        );
+  
+        res.status(201).json({ message: 'User registered successfully' });
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.post('/v2/user/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    const existingUser = await pool.query('SELECT * FROM public.users WHERE id = $1', [username]);
+  
+    if (existingUser.rows.length == 0)  return res.status(401).json({ message: 'User not found' });
+    
+    let getUserDetails = existingUser.rows[0]
+  
+    bcrypt.compare(password, getUserDetails.password, async (err, result) => {
+        if (err || !result)  return res.status(401).json({ message: 'Authentication failed' });
+  
+        const token = jwt.sign({ username }, secretKey, { expiresIn: '5m' });
+
+        await pool.query(`UPDATE public.users SET token = $1, last_login_at = NOW() WHERE id = $2`, [token, username])
+
+        res.status(200).json({ message: 'Authentication successful', token });
+    });
+})
+
+router.get('/v2/protected', verifyToken, (req, res) => {
+    res.json({
+        status: 'success',
+        message: 'This is protected route. If you see this means your token is valid.'
+    })
+})
+
+router.get('/v2/user/logout', verifyToken,  async (req, res) => {
+    const decodedToken = req.decodedToken;
+
+    const isTokenExist = await pool.query(`SELECT token FROM public.users WHERE id = $1`, [decodedToken.username])
+    if (isTokenExist.rows.length == 0 ) { return res.json({ message: "User already logged out."}) }
+
+    await pool.query(`UPDATE public.users SET token = NULL WHERE id = $1`, [decodedToken.username])
+
+    return res.json({
+        message: `User ${decodedToken.username} successfully logout.`
+    })
+
+    //Optional: You can always implement on how to blacklist the token from being used again within its token expiration time to stregthen the security
+    //          OR simulate a logout by setting a short token expiration time etc
+})
 
 module.exports = router
