@@ -132,7 +132,7 @@ const txtFileFilter = function (req, file, callback) {
     if (file.mimetype === 'text/plain') {
         callback(null, true);
     } else {
-        callback(new Error('Only APK files are allowed'));
+        callback(new Error('Only .txt files are allowed'));
     }
 };
 
@@ -168,8 +168,10 @@ router.post('/upload', upload.single('file'),  (req, res) => {
  // ======================================================================
 // TASK 5 (a)
 // ======================================================================
-//  GET METHOD - Fetch latest bitcoin prices from external 3rd party API and saved to database
-//  API URL - localhost:3003/api/bitcoin_price
+//  Title - Fetch latest bitcoin prices from external 3rd party API and saved to database
+//  API URL (GET) - localhost:3003/api/bitcoin_price
+//
+//  Task 5(b) located in components/cronjobs/cronjobs.js
 
 router.get('/bitcoin_price', async (req, res) => {
    try {
@@ -318,7 +320,9 @@ router.get('/v2/user/logout', verifyToken,  async (req, res) => {
         message: `User ${decodedToken.username} successfully logout.`
     })
 
-    //Optional: You can always implement on how to blacklist the token from being used again within its token expiration time to stregthen the security
+    //Optional: You can always implement below to to stregthen the security
+    //          OR blacklist the token from being used again within its token expiration time (use Redis server)
+    //          OR use HTTP-only cookie or server session
     //          OR simulate a logout by setting a short token expiration time etc
 })
 
