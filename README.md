@@ -1,6 +1,6 @@
 ﻿# nodejs-intern
 
-Nodejs training material I've created for interns, this covers routing, middleware, file-handling, token security implementation. <br>Feel free to reuse it.
+Nodejs training material I've created for interns for my current company, this covers routing, middleware, file-handling, token security implementation. <br>Feel free to reuse it.
 
 Task 1: <br>Create a simple GET API server which return 'Hello World' when hit from a browser. <br>
 
